@@ -1,0 +1,275 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class ButController : MonoBehaviour
+{
+    public GameObject DefaultBat1;
+    public GameObject DefaultBat2;
+    public GameObject DefaultBat3;
+    public GameObject DefaultBat4;
+    public GameObject MetalBut1;
+    public GameObject MetalBut2;
+    public GameObject MetalBut3;
+    public GameObject MetalBut4;
+    [SerializeField] Material[] materialArray = new Material[4];
+    Material cubeMaterial;
+    [SerializeField]
+    private int Transparentcount;
+    //ゴールドバットのテクスチャ
+    public Material goldMaterial;
+
+    public Transform parent; // 親オブジェクトのTransform
+
+    public Vector3 hitForce = new Vector3(1000, 1000, 0);
+
+    // InputActionAssetへの参照
+    [SerializeField]
+    private PlayerInput playerInput;
+
+    [SerializeField]
+    private float rotationSpeed = 10f;
+
+    // オブジェクトのColliderを格納する変数
+    private Collider objectCollider;
+
+    // 判定がONになってからの経過時間
+    [SerializeField]
+    private float elapsedTime = 0f;
+
+    // 判定がONになってから判定をOFFにするまでの時間
+    [SerializeField]
+    private float duration = 0.5f;
+
+    // 判定がONかどうかを示すフラグ
+    private bool isCollisionEnabled = false;
+
+    // 判定がONの場合の吹き飛ばす力
+    public float explosionForce = 500f;
+
+    private bool bomuCrush2 = false;
+    //hara
+    private bool goldBut = false;
+
+    private int playerId;
+
+    public float forceMagnitude = 10f;
+
+    public float invincibleTime = 0.5f;
+    public float blinkInterval = 0.2f;
+
+    //IK制御スクリプト呼び出し
+    public RightHandMatcher rightHandMatcher;
+    // Start is called before the first frame update
+    void Start()
+    {
+        Transparentcount = 0;
+        // オブジェクトにアタッチされたColliderを取得
+        objectCollider = GetComponent<Collider>();
+
+        // 初期状態では判定をOFFにする
+        objectCollider.enabled = false;
+        
+    }
+    void Awake()
+    {
+        playerId = playerInput.playerIndex;
+    }
+    // Update is called once per frame
+    void Update()
+    {
+        //プレイヤーのスコア変数呼び出し
+        int number1 = ScoreData.score1;
+        int number2 = ScoreData.score2;
+        int number3 = ScoreData.score3;
+        int number4 = ScoreData.score4;
+        // PS4のL2かR2トリガーを押した場合
+        if (bomuCrush2 == true)
+        {
+            Transparentcount++;
+
+            if (Transparentcount >= materialArray.Length)
+            {
+                Transparentcount = 1;
+            }
+            GetComponent<MeshRenderer>().material = materialArray[Transparentcount];
+
+            // 判定をONにする
+            objectCollider.enabled = true;
+            isCollisionEnabled = true;
+            //IK制御をONにする
+            rightHandMatcher.IKControl();
+
+
+        }
+
+        // 判定がONの場合
+        if (isCollisionEnabled)
+        {
+            // 経過時間を更新
+            elapsedTime += Time.deltaTime;
+
+            // 経過時間が指定の時間を超えた場合
+            if (elapsedTime >= duration)
+            {
+                Transparentcount--;
+                if (Transparentcount < 0)
+                {
+                    Transparentcount = materialArray.Length - 1;
+                }
+                GetComponent<MeshRenderer>().material = materialArray[Transparentcount];
+                // 判定をOFFにする
+                bomuCrush2 = false;
+                objectCollider.enabled = false;
+
+                isCollisionEnabled = false;
+
+            }
+        }
+        if (goldBut == true)
+        {
+            //プレイヤーのスコアで一番高い数値のプレイヤー以外のバットを変化させる
+            float maxScore = Mathf.Max(number1, number2, number3, number4);
+            if (maxScore == number1)//Playre1が１位だった場合
+            {
+                if (MetalBut1.activeInHierarchy)//もしプレイヤー１のバットがgoldの場合はdefaultに戻す
+                {
+                    MetalBut1.SetActive(false);
+                    DefaultBat1.SetActive(true);
+                }
+                MetalBut2.SetActive(true);
+                MetalBut3.SetActive(true);
+                MetalBut4.SetActive(true);
+                DefaultBat2.SetActive(false);
+                DefaultBat3.SetActive(false);
+                DefaultBat4.SetActive(false);
+            }
+            else if (maxScore == number2)
+            {
+                if (MetalBut2.activeInHierarchy)
+                {
+                    MetalBut2.SetActive(false);
+                    DefaultBat2.SetActive(true);
+                }
+                MetalBut1.SetActive(true);
+                MetalBut3.SetActive(true);
+                MetalBut4.SetActive(true);
+                DefaultBat1.SetActive(false);
+                DefaultBat3.SetActive(false);
+                DefaultBat4.SetActive(false);
+
+            }
+            else if (maxScore == number3)
+            {
+                if (MetalBut3.activeInHierarchy)
+                {
+                    MetalBut3.SetActive(false);
+                    DefaultBat3.SetActive(true);
+                }
+                MetalBut1.SetActive(true);
+                MetalBut2.SetActive(true);
+                MetalBut4.SetActive(true);
+                DefaultBat1.SetActive(false);
+                DefaultBat2.SetActive(false);
+                DefaultBat4.SetActive(false);
+            }
+            else if (maxScore == number4)
+            {
+                if (MetalBut4.activeInHierarchy)
+                {
+                    MetalBut4.SetActive(false);
+                    DefaultBat4.SetActive(true);
+                }
+                MetalBut1.SetActive(true);
+                MetalBut2.SetActive(true);
+                MetalBut3.SetActive(true);
+                DefaultBat1.SetActive(false);
+                DefaultBat2.SetActive(false);
+                DefaultBat3.SetActive(false);
+
+            }
+        }
+
+    }
+
+    public void BomuCrush2()
+    {
+        //PS4 R2のトリガーを持ってくる。
+        bomuCrush2 = true;
+        elapsedTime = 0f;
+    }
+
+    //hara
+    public void GoldBut()
+    {
+        goldBut = true;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        // 衝突したオブジェクトのリジッドボディを取得
+        // 判定がONの場合かつ衝突したオブジェクトが特定のタグを持つ場合
+        if (isCollisionEnabled && collision.gameObject.CompareTag("Bomu"))
+        {
+
+            // 衝突したオブジェクトのリジッドボディを取得
+            Rigidbody rb = collision.gameObject.GetComponent<Rigidbody>();
+            // 衝突したオブジェクトを吹き飛ばす
+            if (bomuCrush2 == true)
+            {
+                StartCoroutine(ButSE());
+
+                if (rb != null)
+                {
+                    // 衝突点を取得
+                    ContactPoint contact = collision.contacts[0];
+
+                    // 衝突角度によって異なる方向に移動させる
+                    Vector3 direction;
+                    float angle = Vector3.Angle(contact.normal, transform.forward);
+
+                    // 吹っ飛ばす距離
+                    float distance = 5f;  // 距離を任意で設定
+
+                    if (angle < 30)
+                    {
+                        // 角度が小さい場合
+                        direction = transform.forward;
+                    }
+                    else if (angle >= 30 && angle < 60)
+                    {
+                        // 中間の角度
+                        direction = (transform.forward + transform.right).normalized;
+                    }
+                    else
+                    {
+                        // 角度が大きい場合
+                        direction = transform.right;
+                    }
+
+                    // 方向に一定距離だけ移動させる
+                    Vector3 targetPosition = rb.position + direction * distance;
+                    targetPosition.y = 0;
+                    rb.MovePosition(targetPosition);
+                }
+            }
+        }
+        IEnumerator ButSE()
+        {
+            float elapsedTime = 0f;
+            while (elapsedTime < invincibleTime)
+            {
+                // 音が確実に再生されるようにチェック
+                if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.PlaySE(SEName.Push);
+                }
+                yield return new WaitForSeconds(blinkInterval);
+                elapsedTime += blinkInterval;
+            }
+            yield return new WaitForSeconds(blinkInterval);
+        }
+    }
+
+}
